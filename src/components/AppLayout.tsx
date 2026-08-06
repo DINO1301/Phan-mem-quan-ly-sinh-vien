@@ -4,7 +4,6 @@ import {
   FileBarChart,
   LayoutDashboard,
   LogOut,
-  Plus,
   Settings,
   Shield,
   Users,
@@ -14,14 +13,13 @@ import { useAppStore } from "@/store/useAppStore";
 export default function AppLayout() {
   const location = useLocation();
   const { user, logout } = useAppStore();
-  const isSystemAdmin = user?.username === "admin";
+  const isSystemAdmin = user?.role === "admin";
   const canEdit = user?.role !== "academic_officer";
   const items = [
     { to: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
     { to: "/students", label: "Hồ sơ sinh viên", icon: Users },
     ...(isSystemAdmin ? [{ to: "/permissions", label: "Phân quyền", icon: Shield }] : []),
     { to: "/reports", label: "Báo cáo", icon: FileBarChart },
-    ...(canEdit ? [{ to: "/classes", label: "Thêm lớp", icon: Plus }] : []),
     ...(isSystemAdmin ? [{ to: "/settings", label: "Hệ thống", icon: Settings }] : []),
   ];
 

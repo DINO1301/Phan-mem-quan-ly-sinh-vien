@@ -40,6 +40,7 @@ interface AppState {
   exportReport: (kind: "excel" | "pdf") => Promise<string>;
   createBackup: () => Promise<string>;
   createClass: (payload: CreateClassInput) => Promise<void>;
+  deleteClass: (classId: string) => Promise<void>;
   saveStudentEvent: (payload: StudentEventFormInput) => Promise<void>;
   deleteStudentEvent: (eventId: string, studentId: string) => Promise<void>;
   loadUsers: () => Promise<void>;
@@ -136,6 +137,12 @@ export const useAppStore = create<AppState>((set) => ({
 
   createClass: async (payload) => {
     await desktopApi.createClass(payload);
+    const refreshed = await desktopApi.bootstrap();
+    set((state) => applyBootstrap(state, refreshed));
+  },
+
+  deleteClass: async (classId) => {
+    await desktopApi.deleteClass(classId);
     const refreshed = await desktopApi.bootstrap();
     set((state) => applyBootstrap(state, refreshed));
   },

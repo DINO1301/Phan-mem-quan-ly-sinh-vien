@@ -6,6 +6,7 @@ const Database = require("better-sqlite3");
 const DEFAULT_TENANT_ID = "t-default";
 
 function hashPassword(password) {
+  // TODO(security): Thay SHA256 khong salt bang bcrypt/argon2 de bao mat mat khau hon
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
@@ -358,6 +359,8 @@ function createDatabaseManager(app) {
   }
 
   function listCatalog(table) {
+    // TODO(multi-tenant): Danh muc (faculties/majors/classes/courses...) hien tai la toan cuc.
+    // Can them cot tenant_id va filter theo user.tenantId neu muon moi don vi co danh muc rieng.
     return db.prepare(`SELECT id, name ${table === "courses" ? ", code" : ""} FROM ${table} ORDER BY name`).all();
   }
 
@@ -374,6 +377,19 @@ function createDatabaseManager(app) {
       payload.name,
     );
     return { id, name: payload.name };
+  }
+
+  function deleteClass(tenantId, classId) {
+    const studentCount = db
+      .prepare("SELECT COUNT(*) AS count FROM students WHERE class_id = ? AND tenant_id = ?")
+      .get(classId, tenantId).count;
+    if (studentCount > 0) {
+      throw new Error("Không thể xóa lớp này vì vẫn còn sinh viên trong lớp");
+    }
+    const info = db.prepare("DELETE FROM classes WHERE id = ?").run(classId);
+    if (info.changes === 0) {
+      throw new Error("Không tìm thấy lớp để xóa");
+    }
   }
 
   function bootstrap(tenantId) {
@@ -397,7 +413,7 @@ function createDatabaseManager(app) {
             { label: "Tong sinh vien", value: 0, accent: "text-white" },
             { label: "Dang hoc", value: 0, accent: "text-emerald-300" },
             { label: "Ho so can xu ly", value: 0, accent: "text-amber-300" },
-            { label: "Bao cao kha dung", value: 14, accent: "text-fuchsia-300" },
+            { label: "Bao cao kha dung", value: 2, accent: "text-fuchsia-300" },
           ],
           recentStudents: [],
           alerts: [
@@ -427,6 +443,30 @@ function createDatabaseManager(app) {
       .all({ tenantId });
     const totalActive = students.filter((student) => student.status === "dang_hoc").length;
 
+    const distinctCourses = new Set(students.map((student) => student.courseId)).size;
+    const distinctMajors = new Set(students.map((student) => student.majorId)).size;
+    const distinctClasses = new Set(students.map((student) => student.classId)).size;
+    const hocBongCount = events.filter((event) => event.type === "hoc_bong").length;
+    const khenThuongCount = events.filter((event) => event.type === "khen_thuong").length;
+    const kyLuatCount = events.filter((event) => event.type === "ky_luat").length;
+    const baoLuuCount = students.filter((student) => student.status === "bao_luu").length;
+    const tamNgungCount = students.filter((student) => student.status === "tam_ngung").length;
+    const totNghiepCount = students.filter((student) => student.status === "tot_nghiep").length;
+    const thoiHocCount = students.filter((student) => student.status === "thoi_hoc").length;
+    const availableReports =
+      (students.length > 0 ? 1 : 0) +
+      (distinctCourses > 0 ? 1 : 0) +
+      (distinctMajors > 0 ? 1 : 0) +
+      (distinctClasses > 0 ? 1 : 0) +
+      (hocBongCount > 0 ? 1 : 0) +
+      (khenThuongCount > 0 ? 1 : 0) +
+      (kyLuatCount > 0 ? 1 : 0) +
+      (baoLuuCount > 0 ? 1 : 0) +
+      (tamNgungCount > 0 ? 1 : 0) +
+      (totNghiepCount > 0 ? 1 : 0) +
+      (thoiHocCount > 0 ? 1 : 0) +
+      2;
+
     return {
       user: null,
       students,
@@ -441,7 +481,7 @@ function createDatabaseManager(app) {
           { label: "Tong sinh vien", value: students.length, accent: "text-white" },
           { label: "Dang hoc", value: totalActive, accent: "text-emerald-300" },
           { label: "Ho so can xu ly", value: students.filter((student) => student.status === "bao_luu" || student.status === "tam_ngung").length, accent: "text-amber-300" },
-          { label: "Bao cao kha dung", value: 14, accent: "text-fuchsia-300" },
+          { label: "Bao cao kha dung", value: availableReports, accent: "text-fuchsia-300" },
         ],
         recentStudents: students.slice(0, 4),
         alerts: [
@@ -808,6 +848,7 @@ function createDatabaseManager(app) {
     updateUserRole,
     updateUserActive,
     createClass,
+    deleteClass,
     getStudentById,
     saveStudent,
     deleteStudent,

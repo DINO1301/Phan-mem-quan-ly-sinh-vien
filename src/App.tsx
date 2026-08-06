@@ -14,7 +14,6 @@ import CatalogsSettingsPage from "@/pages/CatalogsSettingsPage";
 import ImportExportSettingsPage from "@/pages/ImportExportSettingsPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import RegisterTeacherPage from "@/pages/RegisterTeacherPage";
-import ClassesPage from "@/pages/ClassesPage";
 
 function AppGuard() {
   const { user, ready } = useAppStore();
@@ -56,7 +55,7 @@ export default function App() {
             <Route path="/students" element={<StudentsPage />} />
           <Route path="/students/:id" element={<StudentDetailPage />} />
           <Route path="/class/:className" element={<ClassDetailPage />} />
-            <Route path="/classes" element={<ClassesPage />} />
+            <Route path="/classes" element={<Navigate to="/students" replace />} />
             <Route path="/permissions" element={<SearchPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />}>

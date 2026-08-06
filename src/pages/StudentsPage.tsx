@@ -1,51 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
-import StudentEditorModal from "@/components/StudentEditorModal";
+import { Plus, Search, Trash2, X } from "lucide-react";
+import CreateClassModal from "@/components/CreateClassModal";
 import { useAppStore } from "@/store/useAppStore";
-import type { StudentSummary } from "@/types";
 
 export default function StudentsPage() {
-  const { user, students, catalogs, saveStudent } = useAppStore();
+  const { user, students, catalogs, createClass, deleteClass } = useAppStore();
   const [keyword, setKeyword] = useState("");
   const [open, setOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<StudentSummary | null>(null);
+  const [confirmClassId, setConfirmClassId] = useState<string | null>(null);
+  const [confirmClassName, setConfirmClassName] = useState<string>("");
+  const [deleteError, setDeleteError] = useState<string>("");
+  const [deleting, setDeleting] = useState(false);
   const [classPageIndex, setClassPageIndex] = useState(0);
   const classPageSize = 6;
 
-  const filteredStudents = useMemo(() => {
+  const filteredClasses = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
-    if (!normalized) {
-      return students;
-    }
-
-    return students.filter((student) =>
-      [student.studentCode, student.fullName, student.className, student.majorName, student.courseName]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized),
+    const classes = catalogs?.classes ?? [];
+    if (!normalized) return classes;
+    return classes.filter((item) =>
+      [item.name, item.code].filter(Boolean).join(" ").toLowerCase().includes(normalized),
     );
-  }, [keyword, students]);
+  }, [catalogs?.classes, keyword]);
 
-  // Group students by class
-  const studentsByClass = useMemo(() => {
-    const groups: Record<string, StudentSummary[]> = {};
-    filteredStudents.forEach((student) => {
-      if (!groups[student.className]) {
-        groups[student.className] = [];
-      }
-      groups[student.className].push(student);
+  const studentsCountByClassId = useMemo(() => {
+    const counts = new Map<string, number>();
+    students.forEach((student) => {
+      counts.set(student.classId, (counts.get(student.classId) ?? 0) + 1);
     });
-    return groups;
-  }, [filteredStudents]);
+    return counts;
+  }, [students]);
 
-  const classEntries = useMemo(
-    () =>
-      Object.entries(studentsByClass).sort(([a], [b]) =>
-        a.localeCompare(b, "vi", { sensitivity: "base" }),
-      ),
-    [studentsByClass],
-  );
+  const classEntries = useMemo(() => {
+    return [...filteredClasses].sort((a, b) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }));
+  }, [filteredClasses]);
 
   useEffect(() => {
     setClassPageIndex(0);
@@ -55,11 +44,7 @@ export default function StudentsPage() {
     return null;
   }
 
-  const handleCloseModal = () => {
-    setOpen(false);
-    setEditingStudent(null);
-  };
-  const canEdit = user?.role !== "academic_officer";
+  const canCreateClass = user?.role === "admin";
   const classPageCount = Math.max(1, Math.ceil(classEntries.length / classPageSize));
   const pagedClasses = classEntries.slice(
     classPageIndex * classPageSize,
@@ -72,7 +57,7 @@ export default function StudentsPage() {
         <div>
           <p className="text-sm font-medium text-slate-500">Hồ sơ sinh viên</p>
           <h2 className="mt-1 text-2xl font-bold text-slate-900">
-            Danh sách và cập nhật hồ sơ
+            Danh sách lớp
           </h2>
         </div>
 
@@ -82,21 +67,20 @@ export default function StudentsPage() {
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm theo mã SV, tên, lớp, ngành..."
+              placeholder="Tìm theo tên lớp, mã lớp..."
               className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500"
             />
           </label>
-          {canEdit && (
+          {canCreateClass && (
             <button
               type="button"
               onClick={() => {
-                setEditingStudent(null);
                 setOpen(true);
               }}
               className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-900"
             >
               <Plus className="h-4 w-4" />
-              Thêm sinh viên
+              Thêm lớp
             </button>
           )}
         </div>
@@ -105,25 +89,49 @@ export default function StudentsPage() {
       <div className="space-y-4">
         {classEntries.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
-            <p className="text-slate-500">Không tìm thấy sinh viên nào</p>
+            <p className="text-slate-500">Không tìm thấy lớp nào</p>
           </div>
         ) : (
-          pagedClasses.map(([className, classStudents]) => (
-            <Link
-              key={className}
-              to={`/class/${encodeURIComponent(className)}`}
-              className="block rounded-2xl border border-slate-200 bg-white transition hover:bg-slate-50"
+          pagedClasses.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white transition hover:bg-slate-50"
             >
-              <div className="flex items-center justify-between px-6 py-4">
+              <Link
+                to={`/class/${encodeURIComponent(item.name)}`}
+                className="flex flex-1 items-center justify-between px-6 py-4"
+              >
                 <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-semibold text-slate-900">Lớp {className}</h3>
+                  <h3 className="text-lg font-semibold text-slate-900">Lớp {item.name}</h3>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600">
-                    {classStudents.length} sinh viên
+                    {studentsCountByClassId.get(item.id) ?? 0} sinh viên
                   </span>
                 </div>
                 <span className="text-sm text-slate-600">Xem danh sách</span>
-              </div>
-            </Link>
+              </Link>
+              {canCreateClass ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    const count = studentsCountByClassId.get(item.id) ?? 0;
+                    if (count > 0) {
+                      setDeleteError("Không thể xóa lớp này vì vẫn còn sinh viên trong lớp.");
+                      setConfirmClassId(null);
+                      return;
+                    }
+                    setDeleteError("");
+                    setConfirmClassId(item.id);
+                    setConfirmClassName(item.name);
+                  }}
+                  className="mr-4 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-rose-600 transition hover:bg-rose-50"
+                  title="Xóa lớp"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Xóa</span>
+                </button>
+              ) : null}
+            </div>
           ))
         )}
       </div>
@@ -154,15 +162,70 @@ export default function StudentsPage() {
         </div>
       ) : null}
 
-      <StudentEditorModal
+      {confirmClassId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-6">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Xóa lớp</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Bạn chắc chắn muốn xóa lớp <strong>{confirmClassName}</strong>? Hành động này không thể hoàn tác.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmClassId(null);
+                  setDeleteError("");
+                }}
+                className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {deleteError ? (
+              <div className="mt-4 rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600">{deleteError}</div>
+            ) : null}
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmClassId(null);
+                  setDeleteError("");
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  setDeleteError("");
+                  try {
+                    await deleteClass(confirmClassId);
+                    setConfirmClassId(null);
+                  } catch (error) {
+                    setDeleteError(error instanceof Error ? error.message : "Không thể xóa lớp");
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60"
+              >
+                {deleting ? "Đang xóa..." : "Xóa lớp"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <CreateClassModal
         open={open}
         catalogs={catalogs}
-        initialValue={editingStudent}
-        onClose={handleCloseModal}
-        onSubmit={async (payload) => {
-          await saveStudent(payload);
-          handleCloseModal();
-        }}
+        onClose={() => setOpen(false)}
+        onSubmit={(payload) => createClass(payload)}
       />
     </div>
   );

@@ -41,11 +41,7 @@ function requireRole(roles) {
 }
 
 function requireSystemAdmin() {
-  const user = requireRole(["admin"]);
-  if (user.username !== "admin") {
-    throw new Error("Chỉ tài khoản admin mới được phép truy cập hệ thống");
-  }
-  return user;
+  return requireRole(["admin"]);
 }
 
 function registerAppProtocol() {
@@ -144,6 +140,8 @@ async function exportPdf() {
 }
 
 function registerIpc() {
+  // TODO(security): currentUser chi luu tren RAM main process -> restart app mat session.
+  // Nen luu token/session vao secureStorage hoac encrypted file de giu dang nhap.
   ipcMain.handle("app:bootstrap", () => {
     const payload = db.bootstrap(currentUser?.tenantId);
     return { ...payload, user: currentUser };
@@ -223,6 +221,10 @@ function registerIpc() {
   ipcMain.handle("catalogs:createClass", (_event, payload) => {
     requireSystemAdmin();
     return db.createClass(payload);
+  });
+  ipcMain.handle("catalogs:deleteClass", (_event, classId) => {
+    const user = requireSystemAdmin();
+    return db.deleteClass(user.tenantId, classId);
   });
   ipcMain.handle("reports:export", async (_event, kind) => {
     requireAuth();

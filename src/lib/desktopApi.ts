@@ -146,6 +146,8 @@ const browserFallbackApi: DesktopApi = {
   },
 
   async login(username: string, password: string) {
+    // TODO(dev-only): Che do browser fallback nay KHONG kiem tra password.
+    // Chi dung cho phat trien, production phai qua Electron (window.desktopAPI).
     void password;
     const state = readState();
     const matched = state.users.find((item) => item.username === username && item.isActive);
@@ -166,6 +168,29 @@ const browserFallbackApi: DesktopApi = {
   async createClass(_payload: CreateClassInput) {
     void _payload;
     throw new Error("Chức năng này chỉ hỗ trợ trong bản Desktop (Electron)");
+  },
+
+  async deleteClass(classId: string) {
+    const state = readState();
+    if (!state.user) {
+      throw new Error("Vui lòng đăng nhập để thực hiện thao tác này");
+    }
+    const catalogs = createBootstrap().catalogs;
+    const classes = catalogs.classes.filter((item) => item.id !== classId);
+    const sampleStudentsLocal = state.students;
+    const hasStudents = sampleStudentsLocal.some((student) => student.classId === classId);
+    if (hasStudents) {
+      throw new Error("Không thể xóa lớp này vì vẫn còn sinh viên trong lớp");
+    }
+    const nextStudents = sampleStudentsLocal.map((student) => {
+      if (student.classId === classId) {
+        return { ...student, classId: classes[0]?.id ?? "", className: classes[0]?.name ?? "" };
+      }
+      return student;
+    });
+    const nextCatalogs = { ...catalogs, classes };
+    void nextCatalogs;
+    writeState({ ...state, students: nextStudents });
   },
 
   async register(payload: RegisterTenantInput) {

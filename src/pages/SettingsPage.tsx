@@ -3,7 +3,7 @@ import { useAppStore } from "@/store/useAppStore";
 
 export default function SettingsPage() {
   const { user } = useAppStore();
-  if (user?.username !== "admin") {
+  if (user?.role !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 

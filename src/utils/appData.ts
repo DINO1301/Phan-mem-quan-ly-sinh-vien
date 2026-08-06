@@ -182,6 +182,30 @@ export function buildDashboard(students: StudentSummary[], events: StudentEvent[
     { label: "Tốt nghiệp", key: "tot_nghiep", accent: "text-cyan-300" },
   ] as const;
 
+  const distinctCourses = new Set(students.map((item) => item.courseId)).size;
+  const distinctMajors = new Set(students.map((item) => item.majorId)).size;
+  const distinctClasses = new Set(students.map((item) => item.classId)).size;
+  const hocBongCount = events.filter((item) => item.type === "hoc_bong").length;
+  const khenThuongCount = events.filter((item) => item.type === "khen_thuong").length;
+  const kyLuatCount = events.filter((item) => item.type === "ky_luat").length;
+  const baoLuuCount = students.filter((item) => item.status === "bao_luu").length;
+  const tamNgungCount = students.filter((item) => item.status === "tam_ngung").length;
+  const totNghiepCount = students.filter((item) => item.status === "tot_nghiep").length;
+  const thoiHocCount = students.filter((item) => item.status === "thoi_hoc").length;
+  const availableReports =
+    (students.length > 0 ? 1 : 0) +
+    (distinctCourses > 0 ? 1 : 0) +
+    (distinctMajors > 0 ? 1 : 0) +
+    (distinctClasses > 0 ? 1 : 0) +
+    (hocBongCount > 0 ? 1 : 0) +
+    (khenThuongCount > 0 ? 1 : 0) +
+    (kyLuatCount > 0 ? 1 : 0) +
+    (baoLuuCount > 0 ? 1 : 0) +
+    (tamNgungCount > 0 ? 1 : 0) +
+    (totNghiepCount > 0 ? 1 : 0) +
+    (thoiHocCount > 0 ? 1 : 0) +
+    2;
+
   const stats = [
     { label: "Tổng sinh viên", value: students.length, accent: "text-white" },
     {
@@ -196,7 +220,7 @@ export function buildDashboard(students: StudentSummary[], events: StudentEvent[
     },
     {
       label: "Báo cáo khả dụng",
-      value: 14,
+      value: availableReports,
       accent: "text-fuchsia-300",
     },
   ];

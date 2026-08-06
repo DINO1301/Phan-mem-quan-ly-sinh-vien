@@ -7,6 +7,7 @@ interface StudentEditorModalProps {
   open: boolean;
   catalogs: Catalogs;
   initialValue?: StudentSummary | null;
+  initialClassId?: string;
   onClose: () => void;
   onSubmit: (payload: StudentFormInput) => Promise<void>;
 }
@@ -23,6 +24,7 @@ export default function StudentEditorModal({
   open,
   catalogs,
   initialValue,
+  initialClassId,
   onClose,
   onSubmit,
 }: StudentEditorModalProps) {
@@ -55,13 +57,13 @@ export default function StudentEditorModal({
       address: initialValue?.address ?? "",
       facultyId: initialValue?.facultyId ?? catalogs.faculties[0]?.id ?? "",
       majorId: initialValue?.majorId ?? catalogs.majors[0]?.id ?? "",
-      classId: initialValue?.classId ?? catalogs.classes[0]?.id ?? "",
+      classId: initialValue?.classId ?? initialClassId ?? catalogs.classes[0]?.id ?? "",
       courseId: initialValue?.courseId ?? catalogs.courses[0]?.id ?? "",
       trainingSystemId: initialValue?.trainingSystemId ?? catalogs.trainingSystems[0]?.id ?? "",
       policyObjectId: initialValue?.policyObjectId ?? "",
       status: initialValue?.status ?? "dang_hoc",
     });
-  }, [catalogs, initialValue, open, reset]);
+  }, [catalogs, initialClassId, initialValue, open, reset]);
 
   if (!open) {
     return null;

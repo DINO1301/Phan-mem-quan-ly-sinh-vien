@@ -208,6 +208,7 @@ export interface DesktopApi {
   register: (payload: RegisterTenantInput) => Promise<AppUser>;
   logout: () => Promise<void>;
   createClass: (payload: CreateClassInput) => Promise<CatalogOption>;
+  deleteClass: (classId: string) => Promise<void>;
   getStudentById: (studentId: string) => Promise<StudentDetail | null>;
   saveStudent: (payload: StudentFormInput) => Promise<StudentDetail>;
   deleteStudent: (studentId: string) => Promise<void>;

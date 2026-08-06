@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("desktopAPI", {
   importStudents: (rows) => ipcRenderer.invoke("students:import", rows),
   createBackup: () => ipcRenderer.invoke("backup:create"),
   createClass: (payload) => ipcRenderer.invoke("catalogs:createClass", payload),
+  deleteClass: (classId) => ipcRenderer.invoke("catalogs:deleteClass", classId),
   saveStudentEvent: (payload) => ipcRenderer.invoke("students:saveEvent", payload),
   deleteStudentEvent: (eventId, studentId) => ipcRenderer.invoke("students:deleteEvent", eventId, studentId),
 });

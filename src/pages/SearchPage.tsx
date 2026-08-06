@@ -16,15 +16,26 @@ export default function SearchPage() {
   const [newFullName, setNewFullName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<Exclude<UserRole, "admin">>("affairs_officer");
+  const [userPageIndex, setUserPageIndex] = useState(0);
+  const userPageSize = 6;
 
   useEffect(() => {
-    if (user?.username === "admin") {
+    if (user?.role === "admin") {
       void loadUsers();
     }
-  }, [loadUsers, user?.username]);
+  }, [loadUsers, user?.role]);
 
-  const isAdmin = user?.username === "admin";
+  useEffect(() => {
+    setUserPageIndex(0);
+  }, [users.length]);
+
+  const isAdmin = user?.role === "admin";
   const roleMap = useMemo(() => Object.fromEntries(roleOptions.map((opt) => [opt.value, opt])), []);
+  const userPageCount = Math.max(1, Math.ceil(users.length / userPageSize));
+  const pagedUsers = users.slice(
+    userPageIndex * userPageSize,
+    userPageIndex * userPageSize + userPageSize,
+  );
 
   if (!isAdmin) {
     return (
@@ -140,7 +151,7 @@ export default function SearchPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {users.map((account) => (
+              {pagedUsers.map((account) => (
                 <tr key={account.id} className="transition hover:bg-slate-50">
                   <td className="px-6 py-4">
                     <div className="font-medium text-slate-900">{account.username}</div>
@@ -207,6 +218,31 @@ export default function SearchPage() {
             </tbody>
           </table>
         </div>
+        {users.length > userPageSize ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 text-sm text-slate-700">
+            <span>
+              Trang {userPageIndex + 1} / {userPageCount}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setUserPageIndex((prev) => Math.max(0, prev - 1))}
+                disabled={userPageIndex === 0}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Trang trước
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserPageIndex((prev) => Math.min(userPageCount - 1, prev + 1))}
+                disabled={userPageIndex >= userPageCount - 1}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Trang sau
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );
