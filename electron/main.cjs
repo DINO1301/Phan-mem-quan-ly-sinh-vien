@@ -88,22 +88,79 @@ function createWindow() {
   });
 }
 
+function statusVi(status) {
+  switch (status) {
+    case "dang_hoc": return "Đang học";
+    case "bao_luu": return "Bảo lưu";
+    case "tam_ngung": return "Tạm ngừng";
+    case "tot_nghiep": return "Tốt nghiệp";
+    case "thoi_hoc": return "Thôi học";
+    default: return status ?? "";
+  }
+}
+
 async function exportExcel() {
   const payload = db.bootstrap(requireAuth().tenantId);
-  const sheet = XLSX.utils.json_to_sheet(
-    payload.students.map((student) => ({
-      MaSV: student.studentCode,
-      HoVaTen: student.fullName,
-      Lop: student.className,
-      Nganh: student.majorName,
-      KhoaHoc: student.courseName,
-      HeDaoTao: student.trainingSystemName,
-      TrangThai: student.status,
-    })),
-  );
+  const rows = payload.students.map((s) => ({
+    "Mã sinh viên": s.studentCode ?? "",
+    "Họ và tên": s.fullName ?? "",
+    "Giới tính": s.gender ?? "",
+    "Ngày sinh": s.dateOfBirth ?? "",
+    "Số điện thoại": s.phone ?? "",
+    "Email": s.email ?? "",
+    "Địa chỉ thường trú": s.address ?? "",
+    "Khoa": s.facultyName ?? "",
+    "Ngành": s.majorName ?? "",
+    "Lớp": s.className ?? "",
+    "Khóa học": s.courseName ?? "",
+    "Hệ đào tạo": s.trainingSystemName ?? "",
+    "Đối tượng chính sách": s.policyObjectName ?? "",
+    "Trạng thái": statusVi(s.status),
+    "Lần cập nhật cuối": s.updatedAt ?? "",
+  }));
+
+  const sheet = XLSX.utils.json_to_sheet(rows, {
+    header: [
+      "Mã sinh viên",
+      "Họ và tên",
+      "Giới tính",
+      "Ngày sinh",
+      "Số điện thoại",
+      "Email",
+      "Địa chỉ thường trú",
+      "Khoa",
+      "Ngành",
+      "Lớp",
+      "Khóa học",
+      "Hệ đào tạo",
+      "Đối tượng chính sách",
+      "Trạng thái",
+      "Lần cập nhật cuối",
+    ],
+  });
+
+  // Chiều rộng cột hợp lý để đọc Excel
+  sheet["!cols"] = [
+    { wch: 14 },
+    { wch: 26 },
+    { wch: 10 },
+    { wch: 13 },
+    { wch: 15 },
+    { wch: 26 },
+    { wch: 36 },
+    { wch: 22 },
+    { wch: 24 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 22 },
+    { wch: 13 },
+    { wch: 22 },
+  ];
+
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "SinhVien");
-  const filePath = path.join(app.getPath("downloads"), `bao-cao-sinh-vien-${Date.now()}.xlsx`);
+  XLSX.utils.book_append_sheet(workbook, sheet, "DanhMucSinhVien");
+  const filePath = path.join(app.getPath("downloads"), `danh-muc-sinh-vien-${Date.now()}.xlsx`);
   XLSX.writeFile(workbook, filePath);
   return filePath;
 }

@@ -26,6 +26,7 @@ import {
   upsertStudentLocal,
   upsertEventLocal,
 } from "@/utils/appData";
+import * as XLSX from "xlsx";
 
 declare global {
   interface Window {
@@ -278,9 +279,84 @@ const browserFallbackApi: DesktopApi = {
   },
 
   async exportReport(kind: "excel" | "pdf") {
-    return {
-      filePath: `C:/Downloads/bao-cao-sinh-vien-demo.${kind === "excel" ? "xlsx" : "pdf"}`,
+    const state = readState();
+
+    const statusVi = (status?: string) => {
+      switch (status) {
+        case "dang_hoc": return "Đang học";
+        case "bao_luu": return "Bảo lưu";
+        case "tam_ngung": return "Tạm ngừng";
+        case "tot_nghiep": return "Tốt nghiệp";
+        case "thoi_hoc": return "Thôi học";
+        default: return status ?? "";
+      }
     };
+
+    const rows = (state.students ?? []).map((s) => ({
+      "Mã sinh viên": s.studentCode ?? "",
+      "Họ và tên": s.fullName ?? "",
+      "Giới tính": s.gender ?? "",
+      "Ngày sinh": s.dateOfBirth ?? "",
+      "Số điện thoại": s.phone ?? "",
+      "Email": s.email ?? "",
+      "Địa chỉ thường trú": s.address ?? "",
+      "Khoa": s.facultyName ?? "",
+      "Ngành": s.majorName ?? "",
+      "Lớp": s.className ?? "",
+      "Khóa học": s.courseName ?? "",
+      "Hệ đào tạo": s.trainingSystemName ?? "",
+      "Đối tượng chính sách": s.policyObjectName ?? "",
+      "Trạng thái": statusVi(s.status),
+      "Lần cập nhật cuối": s.updatedAt ?? "",
+    }));
+
+    const fileName = `danh-muc-sinh-vien-${Date.now()}.${kind === "excel" ? "xlsx" : "pdf"}`;
+    const filePath = typeof window !== "undefined"
+      ? `${window.location.hostname === "localhost" ? "Downloads" : ""}/${fileName}`
+      : fileName;
+
+    if (kind === "excel") {
+      const header = [
+        "Mã sinh viên",
+        "Họ và tên",
+        "Giới tính",
+        "Ngày sinh",
+        "Số điện thoại",
+        "Email",
+        "Địa chỉ thường trú",
+        "Khoa",
+        "Ngành",
+        "Lớp",
+        "Khóa học",
+        "Hệ đào tạo",
+        "Đối tượng chính sách",
+        "Trạng thái",
+        "Lần cập nhật cuối",
+      ];
+      const sheet = XLSX.utils.json_to_sheet(rows, { header });
+      sheet["!cols"] = [
+        { wch: 14 },
+        { wch: 26 },
+        { wch: 10 },
+        { wch: 13 },
+        { wch: 15 },
+        { wch: 26 },
+        { wch: 36 },
+        { wch: 22 },
+        { wch: 24 },
+        { wch: 18 },
+        { wch: 14 },
+        { wch: 16 },
+        { wch: 22 },
+        { wch: 13 },
+        { wch: 22 },
+      ];
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, "DanhMucSinhVien");
+      XLSX.writeFile(workbook, fileName);
+    }
+
+    return { filePath };
   },
 
   async importStudents(rows: Partial<StudentFormInput>[]): Promise<ImportResult> {
